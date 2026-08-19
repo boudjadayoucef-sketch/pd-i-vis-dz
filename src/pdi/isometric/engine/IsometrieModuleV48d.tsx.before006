@@ -3031,15 +3031,6 @@ function IsometrieModule() {
   },[authReady,userUid,recoveryChecked,recoveryCandidate,recoveryFailure,projectName,wilaya,pressDesign,lines,nodes,segments,showGrid,showDimensions,showPipeLabels,showLabels,showWelds,isoSnapStep,viewport]);
 
   const runWorkspaceCommand=(action:()=>void,label:string)=>{action();setCommandPaletteOpen(false);setStatusMessage(label);};
-
-  // PATCH 006 — universal CAD toolbar.
-  // Outils universels préparés sans créer de second moteur 2D : les actions non
-  // encore reliées au graphe V4.8d affichent un état explicite, pas une fausse logique.
-  const cadToolPrepared = (label: string) => {
-    setInteractionMode("select");
-    setIsoDrawMode("select");
-    setStatusMessage(`${label} préparé · moteur 2D canonique prévu patch 007`);
-  };
   const selectedEquipmentNodes=nodes.filter(n=>selectedNodeIds.includes(n.id)&&n.equipmentType);
   const libraryItems=FITTING_TYPES.filter(t=>(FITTING_LABELS[t]+" "+t).toLowerCase().includes(libraryQuery.toLowerCase()));
 
@@ -3165,7 +3156,7 @@ function IsometrieModule() {
 
   return <div
       data-pdi-studio="v4.8d1"
-      className={`${workspaceFullscreen ? "fixed inset-0 z-[9999] overflow-hidden bg-[#0B0F14] px-2 pb-[34px] pt-[116px] pl-[64px]" : "w-full"} pdi-studio-root ${workspaceFullscreen ? "h-screen" : "space-y-3"} animate-fade-in`}
+      className={`${workspaceFullscreen ? "fixed inset-0 z-[9999] overflow-hidden bg-[#0B0F14] px-2 pb-[34px] pt-[84px] pl-[64px]" : "w-full"} pdi-studio-root ${workspaceFullscreen ? "h-screen" : "space-y-3"} animate-fade-in`}
     >
       <style>{`
         [data-pdi-studio]{--pdi-bg:#0B0F14;--pdi-panel:#161B22;--pdi-panel2:#1C222B;--pdi-line:#30363D;--pdi-text:#E6EDF3;--pdi-muted:#8B949E;--pdi-blue:#2F81F7;--pdi-cyan:#22D3EE;--pdi-select:#F59E0B;background:var(--pdi-bg)!important;color:var(--pdi-text);font-family:Inter,ui-sans-serif,system-ui,sans-serif}
@@ -3201,12 +3192,6 @@ function IsometrieModule() {
         [data-pdi-studio] .pdi-rail-button{width:38px;height:38px;border:1px solid rgba(255,255,255,0.06);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9CA3AF;background:#161B22;font-weight:700;font-size:13px;cursor:pointer}
         [data-pdi-studio] .pdi-rail-button:hover{border-color:#3B82F6;color:#E6EDF3;background:#1C2735}
         [data-pdi-studio] .pdi-rail-button.active{color:white;background:#2563EB;border-color:#60A5FA;box-shadow:0 0 12px rgba(37,99,235,0.4)}
-        [data-pdi-studio] .pdi-cad-ribbon{background:#151B24;border-bottom:1px solid #30363D;box-shadow:0 8px 20px rgba(0,0,0,.25)}
-        [data-pdi-studio] .pdi-ribbon-group{height:40px;display:flex;align-items:center;gap:4px;border-right:1px solid #30363D;padding-right:10px;flex-shrink:0}
-        [data-pdi-studio] .pdi-ribbon-group span{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:#7D8590;font-weight:900;margin-right:3px}
-        [data-pdi-studio] .pdi-ribbon-group button{height:30px;padding:0 9px;border-radius:6px;border:1px solid #30363D;background:#1F2937;color:#D1D5DB;font-size:10px;font-weight:900;white-space:nowrap}
-        [data-pdi-studio] .pdi-ribbon-group button:hover{background:#2563EB;color:white;border-color:#60A5FA}
-
 
         [data-pdi-studio] ::-webkit-scrollbar{width:8px;height:8px}[data-pdi-studio] ::-webkit-scrollbar-track{background:#0B0F14}[data-pdi-studio] ::-webkit-scrollbar-thumb{background:#374151;border:2px solid #0B0F14;border-radius:8px}
         @media(max-width:900px){[data-pdi-studio].pdi-studio-root{padding-left:8px!important;padding-top:92px!important}[data-pdi-studio] .pdi-studio-rail{display:none!important}[data-pdi-studio] .pdi-brand-subtitle{display:none}[data-pdi-studio] .pdi-cad-menubar{position:absolute;left:8px;right:8px;bottom:6px;overflow-x:auto;padding-bottom:1px}[data-pdi-studio] .pdi-cad-menu-trigger{font-size:10px;padding:0 8px}[data-pdi-studio] .pdi-svg-logo{min-width:170px!important;max-width:210px!important}}
@@ -3290,14 +3275,7 @@ function IsometrieModule() {
             <button onClick={()=>setCommandPaletteOpen(true)} className="h-8 px-2 rounded-md border border-slate-700 bg-slate-800 text-[10px] font-black" title="Palette commandes">⌘K</button>
           </div>
         </header>
-        <div className="pdi-cad-ribbon fixed left-[62px] right-0 top-[54px] z-[10004] h-[54px] px-3 flex items-center gap-2 overflow-x-auto">
-          <div className="pdi-ribbon-group"><span>Draw</span><button onClick={() => { setInteractionMode("select"); setIsoDrawMode("segment"); setStatusMessage("Line / Tube · V4.8d"); }}>Line</button><button onClick={() => cadToolPrepared("Polyline")}>Polyline</button><button onClick={() => cadToolPrepared("Circle")}>Circle</button><button onClick={() => cadToolPrepared("Arc")}>Arc</button></div>
-          <div className="pdi-ribbon-group"><span>Annotation</span><button onClick={() => cadToolPrepared("Text")}>Text</button><button onClick={() => { setInteractionMode("select"); setIsoDrawMode("dimension"); setDimensionPick(null); setRightPanelOpen(true); setRightPanelTab("dimensions"); setStatusMessage("Dimension · 2 ancrages V4.8d"); }}>Dimension</button></div>
-          <div className="pdi-ribbon-group"><span>Modify</span><button onClick={copySelection}>Copy</button><button onClick={duplicateSelection}>Duplicate</button><button onClick={() => rotateSelectedEquipment(15)}>Rotate</button><button onClick={deleteSelection}>Delete</button></div>
-          <div className="pdi-ribbon-group"><span>Measure</span><button onClick={() => { setRightPanelOpen(true); setRightPanelTab("dimensions"); setStatusMessage("Mesure distance/rayon/angle préparée · cotations actives"); }}>Measure</button><button onClick={() => { setRightPanelOpen(true); setRightPanelTab("bom"); setStatusMessage("Métré / BOM V4.8d"); }}>BOM</button></div>
-          <div className="pdi-ribbon-group"><span>Output</span><button onClick={printPlanSheet}>Print</button><button onClick={exportProjectJson}>JSON</button></div>
-        </div>
-        <aside className="pdi-studio-rail fixed bottom-0 left-0 top-[108px] z-[10005] w-[62px] py-3 flex flex-col items-center gap-2">
+        <aside className="pdi-studio-rail fixed bottom-0 left-0 top-[54px] z-[10005] w-[62px] py-3 flex flex-col items-center gap-2">
           <button title="Sélection (V)" onClick={()=>{setInteractionMode("select");setIsoDrawMode("select")}} className={`pdi-rail-button ${interactionMode==="select"&&isoDrawMode==="select"?"active":""}`}><MousePointer2 className="w-4 h-4" /></button>
           <button title="Main / déplacement (H / Espace)" onClick={()=>setInteractionMode("main")} className={`pdi-rail-button ${interactionMode==="main"?"active":""}`}><Hand className="w-4 h-4" /></button>
           <button title="Créer un Tube (T)" onClick={()=>{setInteractionMode("select");setIsoDrawMode("segment")}} className={`pdi-rail-button ${isoDrawMode==="segment"?"active":""}`}><Spline className="w-4 h-4" /></button>
@@ -3445,7 +3423,7 @@ setLastSavedAt(restoredTime);setSaveState("autosaved");setRecoveryCandidate(null
           <div className="flex flex-wrap gap-2"><button type="button" onClick={()=>setPlanPage(1)} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold ${planPage===1?"bg-blue-600 text-white":"bg-slate-100"}`}>Planche 1</button><button type="button" onClick={()=>setPlanPage(2)} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold ${planPage===2?"bg-blue-600 text-white":"bg-slate-100"}`}>Planche 2</button><button type="button" onClick={printPlanSheet} className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-900 text-white"><Printer className="inline w-3 h-3 mr-1"/>Imprimer A3 paysage</button></div>
         </div>}
 
-    <div className={`${workspaceFullscreen ? "h-[calc(100vh-146px)] overflow-hidden" : ""} grid grid-cols-1 lg:grid-cols-12 gap-3 items-start`}>
+    <div className={`${workspaceFullscreen ? "h-[calc(100vh-118px)] overflow-hidden" : ""} grid grid-cols-1 lg:grid-cols-12 gap-3 items-start`}>
 
       <div className={`${leftPanelOpen?"lg:col-span-3":"hidden"} ${workspaceFullscreen ? "h-full min-h-0 overflow-y-auto pr-1" : "space-y-3 lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto lg:pr-1"} space-y-3`}>
 

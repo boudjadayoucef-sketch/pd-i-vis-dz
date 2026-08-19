@@ -119,3 +119,13 @@ Date : 2026-08-19
 - Navigation cible sécurisée.
 - Entrée par défaut ISO conservée.
 - Moteur V4.8d non modifié.
+
+
+## PATCH 006 — Ruban CAD universel
+
+Date : 2026-08-19
+
+- Audit confirmé : la sélection professionnelle existe déjà via Patch 004/004b.
+- Ajout d’un ruban CAD universel visible : Draw, Annotation, Modify, Measure, Output.
+- Les outils sûrs réutilisent V4.8d ; les outils futurs sont marqués préparés.
+- Aucun second moteur 2D, aucune duplication de sélection/topologie/projection.
