@@ -129,3 +129,13 @@ Date : 2026-08-19
 - Ajout d’un ruban CAD universel visible : Draw, Annotation, Modify, Measure, Output.
 - Les outils sûrs réutilisent V4.8d ; les outils futurs sont marqués préparés.
 - Aucun second moteur 2D, aucune duplication de sélection/topologie/projection.
+
+
+## PATCH 007 — Fondation géométrie 2D réelle
+
+Date : 2026-08-19
+
+- Ajout d'une couche CAD 2D persistante : entités, calques, sélection 2D.
+- Entités préparées : line, polyline, circle, arc, text.
+- Export/import JSON enrichi avec `model.cad2d`.
+- Aucun second moteur piping ; V4.8d reste source of truth.
