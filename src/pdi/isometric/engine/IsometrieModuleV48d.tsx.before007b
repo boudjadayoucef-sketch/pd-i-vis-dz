@@ -929,50 +929,6 @@ function IsometrieModule() {
     setStatusMessage(`${tool.toUpperCase()} 2D prêt · cliquez dans le plan pour poser un objet de base`);
   };
 
-  // PATCH 007b — 2D manipulation and properties.
-  const selectedCad2dEntity = cad2dEntities.find((entity) => selectedCad2dIds.includes(entity.id)) || null;
-
-  const updateCad2dEntity = (id: string, patch: Partial<Cad2dEntity>) => {
-    setCad2dEntities((prev) => prev.map((entity) => entity.id === id ? { ...entity, ...patch } : entity));
-  };
-
-  const moveSelectedCad2d = (dx: number, dy: number) => {
-    if (!selectedCad2dIds.length) return;
-    const ids = new Set(selectedCad2dIds);
-    setCad2dEntities((prev) => prev.map((entity) => {
-      if (!ids.has(entity.id) || entity.locked) return entity;
-      return {
-        ...entity,
-        points: entity.points?.map((point) => ({ x: point.x + dx, y: point.y + dy })),
-        center: entity.center ? { x: entity.center.x + dx, y: entity.center.y + dy } : entity.center,
-      };
-    }));
-    setStatusMessage(`Déplacement 2D · ${selectedCad2dIds.length} objet(s)`);
-  };
-
-  const duplicateSelectedCad2d = () => {
-    if (!selectedCad2dIds.length) return;
-    const ids = new Set(selectedCad2dIds);
-    const clones = cad2dEntities.filter((entity) => ids.has(entity.id)).map((entity) => ({
-      ...entity,
-      id: makeCad2dId(entity.type),
-      points: entity.points?.map((point) => ({ x: point.x + isoSnapStep, y: point.y + isoSnapStep })),
-      center: entity.center ? { x: entity.center.x + isoSnapStep, y: entity.center.y + isoSnapStep } : entity.center,
-    }));
-    setCad2dEntities((prev) => [...prev, ...clones]);
-    setSelectedCad2dIds(clones.map((entity) => entity.id));
-    setStatusMessage(`${clones.length} objet(s) 2D dupliqué(s) · nouveaux IDs`);
-  };
-
-  const deleteSelectedCad2d = () => {
-    if (!selectedCad2dIds.length) return;
-    const ids = new Set(selectedCad2dIds);
-    setCad2dEntities((prev) => prev.filter((entity) => !ids.has(entity.id)));
-    setSelectedCad2dIds([]);
-    setStatusMessage("Objet(s) 2D supprimé(s)");
-  };
-
-
   const cloneGraph = (
     ns: IsoNode[],
     ss: IsoSegment[],
@@ -1254,25 +1210,6 @@ function IsometrieModule() {
         duplicateSelection();
         return;
       }
-      if(selectedCad2dIds.length && !(e.target as HTMLElement)?.matches("input,textarea,select")){
-        if(e.key.startsWith("Arrow")){
-          e.preventDefault();
-          const step = isoSnapStep * (e.shiftKey ? 4 : 1);
-          moveSelectedCad2d(e.key === "ArrowRight" ? step : e.key === "ArrowLeft" ? -step : 0, e.key === "ArrowDown" ? step : e.key === "ArrowUp" ? -step : 0);
-          return;
-        }
-        if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="d"){
-          e.preventDefault();
-          duplicateSelectedCad2d();
-          return;
-        }
-        if(e.key==="Delete" || e.key==="Backspace"){
-          e.preventDefault();
-          deleteSelectedCad2d();
-          return;
-        }
-      }
-
       if(e.key.startsWith("Arrow") && selectedNodeIds.length && !(e.target as HTMLElement)?.matches("input,textarea,select")){
         e.preventDefault();
         const step=e.shiftKey?Math.max(isoSnapStep,.25)*4:Math.max(isoSnapStep,.25);
@@ -3446,7 +3383,7 @@ function IsometrieModule() {
         <div className="pdi-cad-ribbon fixed left-[62px] right-0 top-[54px] z-[10004] h-[54px] px-3 flex items-center gap-2 overflow-x-auto">
           <div className="pdi-ribbon-group"><span>Draw</span><button onClick={() => { setInteractionMode("select"); setIsoDrawMode("segment"); setStatusMessage("Line / Tube · V4.8d"); }}>Line</button><button onClick={() => prepareCad2dTool("polyline")}>Polyline</button><button onClick={() => prepareCad2dTool("circle")}>Circle</button><button onClick={() => prepareCad2dTool("arc")}>Arc</button></div>
           <div className="pdi-ribbon-group"><span>Annotation</span><button onClick={() => prepareCad2dTool("text")}>Text</button><button onClick={() => { setInteractionMode("select"); setIsoDrawMode("dimension"); setDimensionPick(null); setRightPanelOpen(true); setRightPanelTab("dimensions"); setStatusMessage("Dimension · 2 ancrages V4.8d"); }}>Dimension</button></div>
-          <div className="pdi-ribbon-group"><span>Modify</span><button onClick={copySelection}>Copy</button><button onClick={() => selectedCad2dIds.length ? duplicateSelectedCad2d() : duplicateSelection()}>Duplicate</button><button onClick={() => rotateSelectedEquipment(15)}>Rotate</button><button onClick={() => selectedCad2dIds.length ? deleteSelectedCad2d() : deleteSelection()}>Delete</button></div>
+          <div className="pdi-ribbon-group"><span>Modify</span><button onClick={copySelection}>Copy</button><button onClick={duplicateSelection}>Duplicate</button><button onClick={() => rotateSelectedEquipment(15)}>Rotate</button><button onClick={deleteSelection}>Delete</button></div>
           <div className="pdi-ribbon-group"><span>Measure</span><button onClick={() => { setRightPanelOpen(true); setRightPanelTab("dimensions"); setStatusMessage("Mesure distance/rayon/angle préparée · cotations actives"); }}>Measure</button><button onClick={() => { setRightPanelOpen(true); setRightPanelTab("bom"); setStatusMessage("Métré / BOM V4.8d"); }}>BOM</button></div>
           <div className="pdi-ribbon-group"><span>Output</span><button onClick={printPlanSheet}>Print</button><button onClick={exportProjectJson}>JSON</button></div>
         </div>
@@ -3601,63 +3538,6 @@ setLastSavedAt(restoredTime);setSaveState("autosaved");setRecoveryCandidate(null
     <div className={`${workspaceFullscreen ? "h-[calc(100vh-146px)] overflow-hidden" : ""} grid grid-cols-1 lg:grid-cols-12 gap-3 items-start`}>
 
       <div className={`${leftPanelOpen?"lg:col-span-3":"hidden"} ${workspaceFullscreen ? "h-full min-h-0 overflow-y-auto pr-1" : "space-y-3 lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto lg:pr-1"} space-y-3`}>
-
-        {/* PATCH 007b — Propriétés objet 2D */}
-        {selectedCad2dEntity && (
-          <div className="bg-slate-900 border-2 border-cyan-500/70 rounded-2xl p-3 shadow-lg space-y-2.5 text-white">
-            <div className="flex items-center justify-between border-b border-slate-700 pb-1.5">
-              <h3 className="text-xs font-black uppercase text-cyan-300">Propriétés 2D</h3>
-              <span className="text-[10px] font-mono bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800 font-bold">{selectedCad2dEntity.type}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="col-span-2">
-                <label className="text-[9px] font-bold text-slate-400 block mb-0.5">ID</label>
-                <div className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[10px] font-mono text-slate-300 truncate">{selectedCad2dEntity.id}</div>
-              </div>
-              <div>
-                <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Calque</label>
-                <select value={selectedCad2dEntity.layerId} onChange={(e) => updateCad2dEntity(selectedCad2dEntity.id, { layerId: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white">
-                  {cad2dLayers.map((layer) => <option key={layer.id} value={layer.id}>{layer.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Couleur</label>
-                <input type="color" value={selectedCad2dEntity.color} onChange={(e) => updateCad2dEntity(selectedCad2dEntity.id, { color: e.target.value })} className="w-full h-8 bg-slate-800 border border-slate-700 rounded" />
-              </div>
-              {(selectedCad2dEntity.type === "circle" || selectedCad2dEntity.type === "arc") && (
-                <div>
-                  <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Rayon</label>
-                  <input type="number" step="0.1" value={selectedCad2dEntity.radius || 1} onChange={(e) => updateCad2dEntity(selectedCad2dEntity.id, { radius: Number(e.target.value) || 1 })} className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white" />
-                </div>
-              )}
-              {selectedCad2dEntity.type === "text" && (
-                <div className="col-span-2">
-                  <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Texte</label>
-                  <input value={selectedCad2dEntity.text || ""} onChange={(e) => updateCad2dEntity(selectedCad2dEntity.id, { text: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white" />
-                </div>
-              )}
-              <div>
-                <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Intention</label>
-                <select value={selectedCad2dEntity.metadata?.intent || "draft"} onChange={(e) => updateCad2dEntity(selectedCad2dEntity.id, { metadata: { ...(selectedCad2dEntity.metadata || {}), intent: e.target.value as any } })} className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white">
-                  <option value="draft">Draft</option>
-                  <option value="pipe_axis">Axe tuyauterie</option>
-                  <option value="equipment">Équipement</option>
-                  <option value="annotation">Annotation</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[9px] font-bold text-slate-400 block mb-0.5">Z futur</label>
-                <input type="number" step="0.1" value={selectedCad2dEntity.metadata?.elevationZ || 0} onChange={(e) => updateCad2dEntity(selectedCad2dEntity.id, { metadata: { ...(selectedCad2dEntity.metadata || {}), elevationZ: Number(e.target.value) || 0 } })} className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white" />
-              </div>
-            </div>
-            <div className="grid grid-cols-4 gap-1 pt-1 border-t border-slate-800">
-              <button type="button" onClick={() => moveSelectedCad2d(-isoSnapStep, 0)} className="rounded bg-slate-800 py-1 text-[10px] font-black">←</button>
-              <button type="button" onClick={() => moveSelectedCad2d(isoSnapStep, 0)} className="rounded bg-slate-800 py-1 text-[10px] font-black">→</button>
-              <button type="button" onClick={duplicateSelectedCad2d} className="rounded bg-blue-800 py-1 text-[10px] font-black">Dup</button>
-              <button type="button" onClick={deleteSelectedCad2d} className="rounded bg-red-800 py-1 text-[10px] font-black">Del</button>
-            </div>
-          </div>
-        )}
 
         {/* CAD Property Inspector for active selection */}
         {(() => {
@@ -4273,10 +4153,7 @@ setLastSavedAt(restoredTime);setSaveState("autosaved");setRecoveryCandidate(null
                     }
                     if (entity.type === "text" && entity.points && entity.points[0]) {
                       const p = isoProjectV4(entity.points[0].x, entity.points[0].y, entity.metadata?.elevationZ || 0, viewport.zoom, viewport.panX, viewport.panY);
-                      return <g key={entity.id} onClick={common.onClick} style={common.style} transform={`translate(${p.x} ${p.y}) rotate(${entity.rotation || 0})`}>
-                        <rect x="-4" y="-16" width={Math.max(48, (entity.text || "Texte").length * 8)} height="22" rx="3" fill={selected ? "#fbbf24" : "#020617"} fillOpacity={selected ? .18 : .55} stroke={stroke} strokeOpacity=".55" />
-                        <text x="0" y="0" fill={stroke} fontSize="14" fontWeight="900" pointerEvents="none">{entity.text || "Texte"}</text>
-                      </g>;
+                      return <text key={entity.id} x={p.x} y={p.y} fill={stroke} fontSize="12" fontWeight="800" onClick={common.onClick} style={common.style}>{entity.text || "Texte"}</text>;
                     }
                     return null;
                   })}

@@ -139,3 +139,14 @@ Date : 2026-08-19
 - Entités préparées : line, polyline, circle, arc, text.
 - Export/import JSON enrichi avec `model.cad2d`.
 - Aucun second moteur piping ; V4.8d reste source of truth.
+
+
+## PATCH 007b — Objets 2D manipulables et configurables
+
+Date : 2026-08-19
+
+- Correction manipulation/configuration des objets 2D créés par PATCH 007.
+- Ajout panneau propriétés 2D : calque, couleur, texte, rayon, intention, Z futur.
+- Ajout déplacement clavier, duplication et suppression 2D.
+- Correction rendu texte.
+- V4.8d reste source of truth piping.
