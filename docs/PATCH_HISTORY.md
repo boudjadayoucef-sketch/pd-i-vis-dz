@@ -207,3 +207,10 @@ Date : 2026-08-20
 - Grille infinie style AutoCAD.
 - Barre basse métrés/statut masquée.
 - Ajout shell Super Admin Console.
+
+## PATCH 012 — Licences, grille, métrés, déploiement fallback
+
+- Ajout générateur local de clés SaaS.
+- Correction grille SVG stable type AutoCAD.
+- Masquage cartes métrés/barre basse visibles.
+- Ajout stratégie déploiement hors Vercel pour réseau entreprise.

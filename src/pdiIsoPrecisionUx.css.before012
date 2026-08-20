@@ -189,6 +189,3 @@ canvas {
   opacity: 1;
   transform: translateY(0);
 }
-
-/* PATCH 012 — hide lower metric strip */
-.pdi-bottom-meter,[class*="pdi-bottom-meter"],[data-pdi-studio] [class*="bottom-meter"]{display:none!important}

@@ -1,4 +1,3 @@
-// PATCH 012 — grid metrics cleanup
 // PATCH 011 — neutral CAD colors infinite grid no bottom metrics
 // PATCH 007e — compact floating props landing restore
 // PD&I PATCH 007e — workspace space/grid/home corrections
@@ -3590,13 +3589,6 @@ function IsometrieModule() {
         [data-pdi-studio] .pdi-compact-metrics, [data-pdi-studio] .pdi-metric-card{min-height:52px!important;padding:8px 10px!important;border-radius:14px!important}
         [data-pdi-studio] .pdi-compact-metrics h3, [data-pdi-studio] .pdi-metric-card h3{font-size:9px!important;margin:0!important}
         [data-pdi-studio] .pdi-compact-metrics strong, [data-pdi-studio] .pdi-metric-card strong{font-size:18px!important;line-height:1!important}
-
-        /* PATCH 012 — suppress bottom metric cards/status requested */
-        [data-pdi-studio] .pdi-status-docked,
-        [data-pdi-studio] .pdi-bottom-meter,
-        [data-pdi-studio] [class*="bottom-meter"],
-        [data-pdi-studio] [class*="metric"],
-        [data-pdi-studio] [class*="meter"]{display:none!important}
         [data-pdi-studio] .pdi-status-docked{display:none!important}
         [data-pdi-studio] svg{background-color:#0b0f14!important;background-image:radial-gradient(circle at center,rgba(148,163,184,.09) 0,transparent 55%)!important}
       `}</style>
@@ -4340,18 +4332,38 @@ setLastSavedAt(restoredTime);setSaveState("autosaved");setRecoveryCandidate(null
               <defs><marker id="isoArrowV2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#38bdf8"/></marker></defs>
               {gcVisibleEditor && gcUnderlay && <g pointerEvents="none"><image href={gcUnderlay} x={60+gcX} y={45+gcY} width={500*gcScale} height={300*gcScale} opacity={gcOpacity} preserveAspectRatio="none"/></g>}
 
-              {/* PATCH 012 — Stable AutoCAD-like infinite grid */}
-              <defs>
-                <pattern id="pdiGridMinor" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform={`translate(${viewport.panX % 24} ${viewport.panY % 24})`}>
-                  <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#334155" strokeWidth="0.45" opacity="0.42" />
-                </pattern>
-                <pattern id="pdiGridMajor" width="120" height="120" patternUnits="userSpaceOnUse" patternTransform={`translate(${viewport.panX % 120} ${viewport.panY % 120})`}>
-                  <rect width="120" height="120" fill="url(#pdiGridMinor)" />
-                  <path d="M 120 0 L 0 0 0 120" fill="none" stroke="#64748b" strokeWidth="0.85" opacity="0.42" />
-                </pattern>
-              </defs>
-              {showGrid && <rect x="-5000" y="-5000" width="10000" height="10000" fill="url(#pdiGridMajor)" opacity="0.88" pointerEvents="none" />}
+              {/* Dynamic Infinite Zoom/Pan-Aware Drafting Grid */}
+              {showGrid && (
+                <g pointerEvents="none" opacity="0.38">
+                  {(() => {
+                    const lines = [];
+                    const minor = Math.max(12, (isoSnapStep > 0 ? isoSnapStep * 40 : 25) * viewport.zoom);
+                    const major = minor * 4;
+                    const minX = -3000;
+                    const maxX = 4000;
+                    const minY = -2500;
+                    const maxY = 3500;
 
+                    const startX = Math.floor((minX - viewport.panX) / minor) * minor + viewport.panX;
+                    for (let x = startX; x <= maxX; x += minor) {
+                      const dist = Math.abs(x - viewport.panX);
+                      const isMaj = Math.abs(dist % major) < (minor * 0.45);
+                      lines.push(
+                        <line key={`gv_${x.toFixed(1)}`} x1={x.toFixed(1)} y1={minY} x2={x.toFixed(1)} y2={maxY} stroke="#0284c7" strokeWidth={isMaj ? "0.85" : "0.35"} strokeOpacity={isMaj ? "0.55" : "0.2"} />
+                      );
+                    }
+                    const startY = Math.floor((minY - viewport.panY) / minor) * minor + viewport.panY;
+                    for (let y = startY; y <= maxY; y += minor) {
+                      const dist = Math.abs(y - viewport.panY);
+                      const isMaj = Math.abs(dist % major) < (minor * 0.45);
+                      lines.push(
+                        <line key={`gh_${y.toFixed(1)}`} x1={minX} y1={y.toFixed(1)} x2={maxX} y2={y.toFixed(1)} stroke="#0284c7" strokeWidth={isMaj ? "0.85" : "0.35"} strokeOpacity={isMaj ? "0.55" : "0.2"} />
+                      );
+                    }
+                    return lines;
+                  })()}
+                </g>
+              )}
 
               <g>
                 {segments.map(s=>{
