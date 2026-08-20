@@ -6,6 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+firebase-applet-config.json
+firebase_applet_config.xml
+*.secret.json
 
 # PD&I patch backups / temporary files
 *.bak

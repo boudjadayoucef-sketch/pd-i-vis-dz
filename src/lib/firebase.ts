@@ -12,26 +12,27 @@ import {
   addDoc 
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import firebaseConfig from "../../firebase-applet-config.json";
-
-// Allow the user to override Firebase configuration via client-side environment variables in AI Studio settings
+// Allow the user to override Firebase configuration via client-side environment variables
 const metaEnv = (import.meta as any).env || {};
 
-const isCustomProject = !!(
-  metaEnv.VITE_FIREBASE_API_KEY ||
-  metaEnv.VITE_FIREBASE_PROJECT_ID
-);
+const defaultConfig = {
+  apiKey: metaEnv.VITE_FIREBASE_API_KEY || "AIzaSy_demo_api_key_placeholder",
+  authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || "graphical-router-x18qq.firebaseapp.com",
+  projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || "graphical-router-x18qq",
+  storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || "graphical-router-x18qq.firebasestorage.app",
+  messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || "757027531011",
+  appId: metaEnv.VITE_FIREBASE_APP_ID || "1:757027531011:web:758a7df99506a6e9dc6136",
+  firestoreDatabaseId: metaEnv.VITE_FIREBASE_DATABASE_ID || "ai-studio-remixpdi-12e4b2ec-ffc7-48b8-9472-8a77deb300cf"
+};
 
 const activeConfig = {
-  apiKey: metaEnv.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
-  authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
-  projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
-  storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
-  messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
-  appId: metaEnv.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
-  firestoreDatabaseId: isCustomProject
-    ? (metaEnv.VITE_FIREBASE_DATABASE_ID || "")
-    : (firebaseConfig.firestoreDatabaseId || "")
+  apiKey: metaEnv.VITE_FIREBASE_API_KEY || defaultConfig.apiKey,
+  authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || defaultConfig.authDomain,
+  projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || defaultConfig.projectId,
+  storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || defaultConfig.storageBucket,
+  messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || defaultConfig.messagingSenderId,
+  appId: metaEnv.VITE_FIREBASE_APP_ID || defaultConfig.appId,
+  firestoreDatabaseId: metaEnv.VITE_FIREBASE_DATABASE_ID || defaultConfig.firestoreDatabaseId
 };
 
 // Initialize Firebase

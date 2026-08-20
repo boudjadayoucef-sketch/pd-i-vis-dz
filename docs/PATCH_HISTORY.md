@@ -170,3 +170,11 @@ Date : 2026-08-20
 - Style noir/gris minimaliste proche menu clic droit CAD.
 - Restauration navigation Landing/Accueil depuis workspace.
 - Aucun changement topologie piping V4.8d.
+
+## PATCH 008 — Flux SaaS + onglets + sécurité
+
+- Onglets projet persistants.
+- Menu compte/profil.
+- Boutons noirs corrigés.
+- Checklist sécurité SaaS ajoutée.
+- Note assets PNG ajoutée.
