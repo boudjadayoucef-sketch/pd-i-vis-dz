@@ -5,12 +5,13 @@ import PdiBrandMark from "./PdiBrandMark";
 import PdiIsometricEditor from "../isometric/PdiIsometricEditor";
 // PATCH 004c : page publicitaire publique, montee AVANT la coquille applicative.
 import PdiLandingV4 from "../landing/PdiLandingV4";
+import { GoogleDriveWorkspace } from "../../components/GoogleDriveWorkspace";
 import isoPiping3D from "../../assets/images/pdi_iso_piping_3d_1787006532562.jpg";
 import valve3D from "../../assets/images/pdi_valve_3d_1787006543831.jpg";
 import plantScan3D from "../../assets/images/pdi_plant_scan_3d_1787006555680.jpg";
 import cadSpool3D from "../../assets/images/pdi_cad_spool_3d_1787006567003.jpg";
 
-type PdiModule = "home" | "isometric" | "vision" | "sketch" | "cad" | "json" | "pdf" | "projects" | "assistant";
+type PdiModule = "home" | "isometric" | "drive" | "vision" | "sketch" | "cad" | "json" | "pdf" | "projects" | "assistant";
 type PdiWorkspaceTab = { id: string; title: string; module: PdiModule; projectId: string; dirty?: boolean; createdAt: string };
 
 // PATCH 004c : cle de session de l'etape publique.
@@ -30,6 +31,7 @@ type LaunchCard = {
 
 const launchCards: LaunchCard[] = [
   { id: "isometric", title: "Dessin isométrique", subtitle: "Créer un projet manuel avec nœuds, tubes, équipements, cotations et alignements.", badge: "V4.8d1", icon: "ISO", ready: true },
+  { id: "drive", title: "Google Drive & Cloud SQL", subtitle: "Synchroniser, archiver et exporter vos plans et projets ISO sur Google Drive et PostgreSQL.", badge: "Drive & SQL", icon: "DRV", ready: true },
   { id: "vision", title: "Vision PD&I", subtitle: "Transformer une photo de plant réel en JSON piping puis en ISO après validation.", badge: "Photo → ISO", icon: "VIS" },
   { id: "sketch", title: "Croquis → ISO", subtitle: "Importer un dessin à la main, extraire le réseau, valider le JSON puis générer l’ISO.", badge: "Croquis", icon: "CRQ" },
   { id: "cad", title: "Importer CAO / DXF", subtitle: "Lire un DXF/PDF, extraire calques/lignes/blocs et convertir vers JSON PD&I.", badge: "DXF/PDF", icon: "DX" },
@@ -91,6 +93,7 @@ const showcase = [
 const navItems: Array<{ id: PdiModule; label: string; icon: string; title: string }> = [
   { id: "home", label: "Accueil", icon: "⌂", title: "Accueil PD&I" },
   { id: "isometric", label: "ISO", icon: "ISO", title: "Dessin isométrique" },
+  { id: "drive", label: "Drive", icon: "DRV", title: "Google Drive & Cloud SQL" },
   { id: "vision", label: "Vision", icon: "VIS", title: "Vision PD&I — Photo vers ISO" },
   { id: "sketch", label: "Croquis", icon: "CRQ", title: "Croquis vers JSON/ISO" },
   { id: "cad", label: "CAO", icon: "DX", title: "Import CAD/DXF/PDF" },
@@ -143,6 +146,7 @@ export default function PdiUnifiedApp() {
     const allowed: PdiModule[] = [
       "home",
       "isometric",
+      "drive",
       "vision",
       "sketch",
       "cad",
@@ -164,6 +168,7 @@ export default function PdiUnifiedApp() {
       const allowed: PdiModule[] = [
         "home",
         "isometric",
+        "drive",
         "vision",
         "sketch",
         "cad",
@@ -255,6 +260,7 @@ export default function PdiUnifiedApp() {
             </div>
           </aside>
         </div>}
+        {activeModule === "drive" && <GoogleDriveWorkspace onLoadProjectToEditor={(data, name) => { openModuleInTab("isometric", name); }} />}
         {activeModule === "vision" && <ComingSoonPanel title="Vision PD&I"><p><b>Vision PD&I</b> préparera le flux <code>photo réelle → analyse agent → scripts Python → JSON PD&I → validation → ISO</code>. Les images restent en cache local temporaire navigateur.</p></ComingSoonPanel>}
         {activeModule === "sketch" && <ComingSoonPanel title="Croquis → JSON / ISO"><p>Import croquis main, reconnaissance lignes/symboles, conversion vers JSON central, validation humaine, puis génération ISO.</p></ComingSoonPanel>}
         {activeModule === "cad" && <ComingSoonPanel title="Import CAO / DXF / PDF"><p>Import DXF/PDF, lecture des calques et entités, conversion déterministe Python vers JSON PD&I.</p></ComingSoonPanel>}

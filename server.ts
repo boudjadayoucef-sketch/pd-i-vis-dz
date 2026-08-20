@@ -8,6 +8,15 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
+import { 
+  getUserProjects, 
+  createOrUpdateProject, 
+  deleteUserProject, 
+  getDriveFiles, 
+  saveDriveFileRecord 
+} from "./src/db/projects.ts";
+import { getOrCreateUser } from "./src/db/users.ts";
 
 dotenv.config();
 
@@ -15,6 +24,68 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// API health endpoint
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", service: "pdi-industrial-cad" });
+});
+
+// Cloud SQL User Sync & Projects Endpoints
+app.post("/api/auth/sync-user", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const uid = req.user?.uid;
+    const email = req.user?.email || "unknown@domain.com";
+    if (!uid) return res.status(401).json({ error: "Missing user uid" });
+
+    const user = await getOrCreateUser(
+      uid,
+      email,
+      req.body?.displayName || req.user?.name,
+      req.body?.photoUrl || req.user?.picture
+    );
+    res.json({ user });
+  } catch (err: any) {
+    console.error("Error syncing user to Cloud SQL:", err);
+    res.status(500).json({ error: "Failed to sync user profile." });
+  }
+});
+
+app.get("/api/projects", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const uid = req.user?.uid;
+    if (!uid) return res.status(401).json({ error: "Unauthorized" });
+    const userProjects = await getUserProjects(uid);
+    res.json({ projects: userProjects });
+  } catch (err: any) {
+    console.error("Error fetching projects from Cloud SQL:", err);
+    res.status(500).json({ error: "Failed to fetch projects." });
+  }
+});
+
+app.post("/api/projects", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const uid = req.user?.uid;
+    if (!uid) return res.status(401).json({ error: "Unauthorized" });
+    const saved = await createOrUpdateProject(uid, req.body);
+    res.json({ project: saved });
+  } catch (err: any) {
+    console.error("Error saving project to Cloud SQL:", err);
+    res.status(500).json({ error: "Failed to save project." });
+  }
+});
+
+app.delete("/api/projects/:id", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const uid = req.user?.uid;
+    const projectId = Number(req.params.id);
+    if (!uid || isNaN(projectId)) return res.status(400).json({ error: "Invalid request" });
+    await deleteUserProject(uid, projectId);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("Error deleting project from Cloud SQL:", err);
+    res.status(500).json({ error: "Failed to delete project." });
+  }
+});
 
 // Lazy initialization for Google GenAI client (prevents startup crashes when GEMINI_API_KEY is missing or empty)
 let aiInstance: GoogleGenAI | null = null;
