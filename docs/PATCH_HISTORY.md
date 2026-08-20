@@ -150,3 +150,23 @@ Date : 2026-08-19
 - Ajout déplacement clavier, duplication et suppression 2D.
 - Correction rendu texte.
 - V4.8d reste source of truth piping.
+
+
+## PATCH 007d — Drag/resize souris et propriétés CAD compactes
+
+Date : 2026-08-19
+
+- Ajout déplacement souris des objets 2D.
+- Ajout grips et redimensionnement de base.
+- Remplacement du gros panneau par propriétés modulaires compactes style CAD.
+- Aucun changement de topologie piping V4.8d.
+
+
+## PATCH 007e — Palette propriétés compacte et restauration landing
+
+Date : 2026-08-20
+
+- Remplacement du panneau propriétés 2D latéral par une palette flottante compacte déplaçable.
+- Style noir/gris minimaliste proche menu clic droit CAD.
+- Restauration navigation Landing/Accueil depuis workspace.
+- Aucun changement topologie piping V4.8d.

@@ -149,7 +149,8 @@ app.post("/api/gemini/chat", async (req, res) => {
     // The history needs to be mapped to the format the chat api expects, or we can just send the chat session
     const lastMessage = history[history.length - 1]?.content || "";
 
-    const models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"];
+    // Use current Gemini 3 series models
+    const models = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview", "gemini-3.5-flash-lite"];
     let replyText = "";
     let lastErr: any = null;
 

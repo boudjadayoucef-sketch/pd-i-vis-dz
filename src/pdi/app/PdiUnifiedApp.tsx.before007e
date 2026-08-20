@@ -1,4 +1,3 @@
-// PATCH 007e — compact floating props landing restore
 import React, { useEffect, useMemo, useState } from "react";
 import PdiBrandMark from "./PdiBrandMark";
 import PdiIsometricEditor from "../isometric/PdiIsometricEditor";
@@ -139,7 +138,7 @@ export default function PdiUnifiedApp() {
 
   useEffect(() => {
     const onNavigate = (event: Event) => {
-      const detail = (event as CustomEvent<PdiModule | "landing" | string>).detail as PdiModule | "landing";
+      const detail = (event as CustomEvent<PdiModule>).detail;
       // PATCH 005 : navigation ciblee stabilisee.
       // Une navigation externe entre dans le logiciel uniquement vers un module connu.
       const allowed: PdiModule[] = [
@@ -153,14 +152,7 @@ export default function PdiUnifiedApp() {
         "projects",
         "assistant",
       ];
-      if (detail === "landing") {
-        try { window.sessionStorage.removeItem(PDI_STAGE_KEY); } catch {}
-        setStage("landing");
-        setActiveModule("home");
-        return;
-      }
       setStage("app");
-      try { window.sessionStorage.setItem(PDI_STAGE_KEY, "app"); } catch {}
       setActiveModule(allowed.includes(detail) ? detail : "home");
     };
     window.addEventListener("pdi:navigate", onNavigate as EventListener);
