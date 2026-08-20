@@ -191,3 +191,10 @@ Date : 2026-08-20
 - Suppression dépendance au fichier local firebase-applet-config.json.
 - Config Firebase lue via variables Vercel VITE_FIREBASE_*.
 - Build Vercel débloqué sans exposer de secrets privés.
+
+## PATCH 010 — Auth simulée + suppression accès direct
+
+- Ajout gateway Connexion/Créer compte/Activation/Démo.
+- Suppression accès direct via bouton Commencer/Démarrer.
+- Blocage ouverture modules si compte non actif/démo.
+- Correction renforcée boutons noirs.
