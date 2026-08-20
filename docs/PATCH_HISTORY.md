@@ -178,3 +178,10 @@ Date : 2026-08-20
 - Boutons noirs corrigés.
 - Checklist sécurité SaaS ajoutée.
 - Note assets PNG ajoutée.
+
+## PATCH 009 — Profil utilisateur + espace compte
+
+- Ajout module Profil utilisateur.
+- Menu compte enrichi.
+- Page sécurité avec checklist SaaS.
+- Préparation Firebase users/profiles/subscriptions.
