@@ -185,3 +185,9 @@ Date : 2026-08-20
 - Menu compte enrichi.
 - Page sécurité avec checklist SaaS.
 - Préparation Firebase users/profiles/subscriptions.
+
+## PATCH 009b — Fix Vercel Firebase config
+
+- Suppression dépendance au fichier local firebase-applet-config.json.
+- Config Firebase lue via variables Vercel VITE_FIREBASE_*.
+- Build Vercel débloqué sans exposer de secrets privés.
