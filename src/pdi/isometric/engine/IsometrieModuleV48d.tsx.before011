@@ -1,4 +1,3 @@
-// PATCH 011 — neutral CAD colors infinite grid no bottom metrics
 // PATCH 007e — compact floating props landing restore
 // PD&I PATCH 007e — workspace space/grid/home corrections
 // PD&I PATCH 007d — ISO fullscreen is the main PD&I workspace
@@ -851,7 +850,7 @@ function migrateProjectFileV474(value:unknown, fallbackOwnerUid = ""):IsoProject
     : [];
   const legacy=migrateLegacyFittings(sourceNodes,sourceSegments);
   const normalized=normalizedGraphPorts(legacy.nodes,legacy.segments);
-  const fallbackLine:PipingLine={id:DEFAULT_LINE_ID,lineNumber:'8" Constantine',service:"Gaz naturel",dn:200,nps:'8"',material:"Acier API 5L Gr. B",pressureClass:"Class 600",schedule:"40",designPressure:40,color:"#9CA3AF"};
+  const fallbackLine:PipingLine={id:DEFAULT_LINE_ID,lineNumber:'8" Constantine',service:"Gaz naturel",dn:200,nps:'8"',material:"Acier API 5L Gr. B",pressureClass:"Class 600",schedule:"40",designPressure:40,color:"#0284c7"};
   let sourceLines:Array<PipingLine>=Array.isArray(sourceModel.lines)&&sourceModel.lines.length?sourceModel.lines:[fallbackLine];
   if(normalized.segments.some(segment=>(segment.lineId||DEFAULT_LINE_ID)===DEFAULT_LINE_ID)&&!sourceLines.some(line=>line.id===DEFAULT_LINE_ID))sourceLines=[...sourceLines,fallbackLine];
   const sourceWorkspace=raw.workspace||raw.settings||{};
@@ -908,15 +907,15 @@ function IsometrieModule() {
   // IMPORTANT: aucun P01/P02/P03 par défaut.
   const [nodes,setNodesRaw]=useState<IsoNode[]>([]);
   const [segments,setSegmentsRaw]=useState<IsoSegment[]>([]);
-  const [lines,setLinesRaw]=useState<PipingLine[]>([{id:DEFAULT_LINE_ID,lineNumber:'8" Constantine',service:"Gaz naturel",dn:200,nps:'8"',material:"Acier API 5L Gr. B",pressureClass:"Class 600",schedule:"40",designPressure:40,color:"#9CA3AF"}]);
+  const [lines,setLinesRaw]=useState<PipingLine[]>([{id:DEFAULT_LINE_ID,lineNumber:'8" Constantine',service:"Gaz naturel",dn:200,nps:'8"',material:"Acier API 5L Gr. B",pressureClass:"Class 600",schedule:"40",designPressure:40,color:"#0284c7"}]);
   const importProjectRef=useRef<HTMLInputElement>(null);
   const [dimensions, setDimensionsRaw] = useState<IsoDimension[]>([]);
 
   // PATCH 007 — real 2D geometry foundation.
   const [cad2dEntities, setCad2dEntities] = useState<Cad2dEntity[]>([]);
   const [cad2dLayers, setCad2dLayers] = useState<Cad2dLayer[]>([
-    { id: "axes_tuyauterie", name: "Axes tuyauterie", color: "#9CA3AF", visible: true, locked: false },
-    { id: "annotations", name: "Annotations", color: "#9CA3AF", visible: true, locked: false },
+    { id: "axes_tuyauterie", name: "Axes tuyauterie", color: "#4db8d4", visible: true, locked: false },
+    { id: "annotations", name: "Annotations", color: "#f0f0f0", visible: true, locked: false },
     { id: "import_cad", name: "Import CAD / fond plan", color: "#888888", visible: true, locked: false },
   ]);
   const [selectedCad2dIds, setSelectedCad2dIds] = useState<string[]>([]);
@@ -2235,15 +2234,15 @@ function IsometrieModule() {
       const w = screenToIsoWorld(e);
       const point = { x: snapIsoV4(w.x, isoSnapStep), y: snapIsoV4(w.y, isoSnapStep) };
       if (cad2dDraftTool === "line") {
-        addCad2dEntity({ type: "line", layerId: "axes_tuyauterie", color: "#9CA3AF", points: [point, { x: point.x + 2, y: point.y }] });
+        addCad2dEntity({ type: "line", layerId: "axes_tuyauterie", color: "#4db8d4", points: [point, { x: point.x + 2, y: point.y }] });
       } else if (cad2dDraftTool === "polyline") {
-        addCad2dEntity({ type: "polyline", layerId: "axes_tuyauterie", color: "#9CA3AF", points: [point, { x: point.x + 1, y: point.y + 1 }, { x: point.x + 2, y: point.y }] });
+        addCad2dEntity({ type: "polyline", layerId: "axes_tuyauterie", color: "#4db8d4", points: [point, { x: point.x + 1, y: point.y + 1 }, { x: point.x + 2, y: point.y }] });
       } else if (cad2dDraftTool === "circle") {
-        addCad2dEntity({ type: "circle", layerId: "import_cad", color: "#9CA3AF", center: point, radius: 1 });
+        addCad2dEntity({ type: "circle", layerId: "import_cad", color: "#8b5cf6", center: point, radius: 1 });
       } else if (cad2dDraftTool === "arc") {
-        addCad2dEntity({ type: "arc", layerId: "import_cad", color: "#9CA3AF", center: point, radius: 1, startAngle: 0, endAngle: 90 });
+        addCad2dEntity({ type: "arc", layerId: "import_cad", color: "#e8a838", center: point, radius: 1, startAngle: 0, endAngle: 90 });
       } else if (cad2dDraftTool === "text") {
-        addCad2dEntity({ type: "text", layerId: "annotations", color: "#9CA3AF", points: [point], text: "Texte" });
+        addCad2dEntity({ type: "text", layerId: "annotations", color: "#f0f0f0", points: [point], text: "Texte" });
       }
       setCad2dDraftTool(null);
       e.stopPropagation();
@@ -3283,8 +3282,8 @@ function IsometrieModule() {
     setNodesRaw(snapshot.model.nodes);setSegmentsRaw(snapshot.model.segments);setLinesRaw(snapshot.model.lines);
     setDimensionsRaw(snapshot.model.dimensions || []);
     setCad2dLayers(snapshot.model.cad2d?.layers || [
-      { id: "axes_tuyauterie", name: "Axes tuyauterie", color: "#9CA3AF", visible: true, locked: false },
-      { id: "annotations", name: "Annotations", color: "#9CA3AF", visible: true, locked: false },
+      { id: "axes_tuyauterie", name: "Axes tuyauterie", color: "#4db8d4", visible: true, locked: false },
+      { id: "annotations", name: "Annotations", color: "#f0f0f0", visible: true, locked: false },
       { id: "import_cad", name: "Import CAD / fond plan", color: "#888888", visible: true, locked: false },
     ]);
     setCad2dEntities(snapshot.model.cad2d?.entities || []);
@@ -3589,8 +3588,7 @@ function IsometrieModule() {
         [data-pdi-studio] .pdi-compact-metrics, [data-pdi-studio] .pdi-metric-card{min-height:52px!important;padding:8px 10px!important;border-radius:14px!important}
         [data-pdi-studio] .pdi-compact-metrics h3, [data-pdi-studio] .pdi-metric-card h3{font-size:9px!important;margin:0!important}
         [data-pdi-studio] .pdi-compact-metrics strong, [data-pdi-studio] .pdi-metric-card strong{font-size:18px!important;line-height:1!important}
-        [data-pdi-studio] .pdi-status-docked{display:none!important}
-        [data-pdi-studio] svg{background-color:#0b0f14!important;background-image:radial-gradient(circle at center,rgba(148,163,184,.09) 0,transparent 55%)!important}
+        [data-pdi-studio] .pdi-status-docked{height:28px!important;min-height:28px!important;padding-top:3px!important;padding-bottom:3px!important}
       `}</style>
       {workspaceFullscreen&&<>
         <header className="pdi-studio-topbar fixed left-0 right-0 top-0 z-[10008] h-[54px] px-3 flex items-center justify-between gap-3 text-white">
@@ -4273,7 +4271,7 @@ setLastSavedAt(restoredTime);setSaveState("autosaved");setRecoveryCandidate(null
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-[9px] font-bold">Couleur</span>
-                  <input type="color" value={s.color||"#9CA3AF"} onClick={e=>e.stopPropagation()} onChange={e=>setSegments(prev=>prev.map(x=>x.id===s.id?{...x,color:e.target.value}:x))} className="h-6 w-8 p-0 border rounded bg-white"/>
+                  <input type="color" value={s.color||"#0284c7"} onClick={e=>e.stopPropagation()} onChange={e=>setSegments(prev=>prev.map(x=>x.id===s.id?{...x,color:e.target.value}:x))} className="h-6 w-8 p-0 border rounded bg-white"/>
                   <input value={s.sourceName||""} onClick={e=>e.stopPropagation()} onChange={e=>setSegments(prev=>prev.map(x=>x.id===s.id?{...x,sourceName:e.target.value}:x))} className="flex-1 border rounded px-2 py-1 text-[10px] font-bold bg-white" placeholder={'Pipeline source, ex. 8" Constantine'}/>
                 </div>
 
@@ -4387,9 +4385,9 @@ setLastSavedAt(restoredTime);setSaveState("autosaved");setRecoveryCandidate(null
                     {(() => { const pts=isoPolylineV4(s,a,b,viewport.zoom,viewport.panX,viewport.panY); const path=isoPathV4(pts); return <>
                       {sel&&<path d={path} stroke="#38bdf8" strokeWidth={width+8} strokeOpacity=".35" strokeLinecap="round" strokeLinejoin="round" fill="none"/>}
                       {hoveredEntity?.type==="segment"&&hoveredEntity.id===s.id&&!sel&&<path d={path} stroke="#67e8f9" strokeWidth={width+4} strokeOpacity=".3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>}
-                      <path d={path} stroke={s.color||"#9CA3AF"} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      <path d={path} stroke={s.color||((s.pn.includes("600"))?"#f59e0b":"#0284c7")} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" fill="none"/>
                     </>; })()}
-                    {false&&showDimensions&&showPipeLabels&&s.length>=.5&&<g />}
+                    {showDimensions&&showPipeLabels&&s.length>=.5&&<g data-iso-object="true" transform={`translate(${dimensionAnnotation?.x??mx} ${dimensionAnnotation?.y??my-13})`}><rect x="-65" y="-10" width="130" height="18" rx="4" fill="#020617" stroke="#38bdf8"/><text x="0" y="3" fill="#e0f2fe" fontSize="8" fontWeight="900" textAnchor="middle">{(s.sourceName||("Pipeline "+dia(s.dn).inch))+" · L="+s.length.toFixed(2)+" m"}</text></g>}
                     {isoDrawMode==="coude"&&<g data-iso-object="true" transform={`translate(${mx} ${my})`} onClick={e=>{e.stopPropagation();insertGraphicFitting(s.id,fitType.startsWith("coude")?fitType:"coude_90",.5)}} style={{cursor:"crosshair"}}><circle r="14" fill="#f59e0b" fillOpacity=".18" stroke="#fbbf24" strokeDasharray="3 2"/><path d="M-7 7 Q-7 -7 7 -7" stroke="#fbbf24" strokeWidth="2.5" fill="none"/></g>}
                     {false&&s.fittings.map(f=>{
                       const x=p1.x+(p2.x-p1.x)*f.localPosition,y=p1.y+(p2.y-p1.y)*f.localPosition;
@@ -5834,7 +5832,7 @@ setLastSavedAt(restoredTime);setSaveState("autosaved");setRecoveryCandidate(null
       Cela permet les dérivations, piquages, postes de coupure/sectionnement et gares racleurs.
       La position d&apos;un équipement est calculée depuis l&apos;origine de sa chaîne en mètres.
     </div>
-    <div className={`hidden pdi-status-docked ${workspaceFullscreen?"fixed bottom-0 left-[62px] right-0 z-[10008] rounded-none":"sticky bottom-2 z-40 rounded-xl"} bg-slate-950 text-slate-200 border border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-[10px] shadow-lg`}><div className="flex gap-4"><b className="text-emerald-400">● {statusMessage}</b><span className={saveState==="error"?"text-red-400":saveState==="modified"?"text-amber-300":"text-cyan-300"}>{saveState==="modified"?"Modifications non sauvegardées":saveState==="autosaved"?`Autosauvegardé${lastSavedAt?` à ${lastSavedAt}`:""}`:saveState==="error"?"Erreur de sauvegarde":""}</span><span>{nodes.length} nœuds</span><span>{segments.length} tronçons</span><span>{selectedCount} sélectionné(s)</span><span>{selectedCad2dIds.length} objet(s) 2D</span><span className={graphErrorCount?"text-red-400":"text-emerald-400"}>{graphErrorCount?`${graphErrorCount} erreur(s) réseau`:"Graphe valide"}</span><span>{projectJoints.length} joints</span></div><div className="flex gap-3"><span>Outil: <b>{interactionMode==="main"?"MAIN":isoDrawMode.toUpperCase()}</b></span><span>Snap {isoSnapStep} m</span><span>Zoom {Math.round(viewport.zoom*100)}%</span><span>Ctrl+K commandes · ? aide</span></div></div>
+    <div className={`pdi-status-docked ${workspaceFullscreen?"fixed bottom-0 left-[62px] right-0 z-[10008] rounded-none":"sticky bottom-2 z-40 rounded-xl"} bg-slate-950 text-slate-200 border border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-[10px] shadow-lg`}><div className="flex gap-4"><b className="text-emerald-400">● {statusMessage}</b><span className={saveState==="error"?"text-red-400":saveState==="modified"?"text-amber-300":"text-cyan-300"}>{saveState==="modified"?"Modifications non sauvegardées":saveState==="autosaved"?`Autosauvegardé${lastSavedAt?` à ${lastSavedAt}`:""}`:saveState==="error"?"Erreur de sauvegarde":""}</span><span>{nodes.length} nœuds</span><span>{segments.length} tronçons</span><span>{selectedCount} sélectionné(s)</span><span>{selectedCad2dIds.length} objet(s) 2D</span><span className={graphErrorCount?"text-red-400":"text-emerald-400"}>{graphErrorCount?`${graphErrorCount} erreur(s) réseau`:"Graphe valide"}</span><span>{projectJoints.length} joints</span></div><div className="flex gap-3"><span>Outil: <b>{interactionMode==="main"?"MAIN":isoDrawMode.toUpperCase()}</b></span><span>Snap {isoSnapStep} m</span><span>Zoom {Math.round(viewport.zoom*100)}%</span><span>Ctrl+K commandes · ? aide</span></div></div>
   </div>;
 }
 

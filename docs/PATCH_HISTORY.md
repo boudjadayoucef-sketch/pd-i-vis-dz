@@ -198,3 +198,12 @@ Date : 2026-08-20
 - Suppression accès direct via bouton Commencer/Démarrer.
 - Blocage ouverture modules si compte non actif/démo.
 - Correction renforcée boutons noirs.
+
+## PATCH 011 — Super Admin + corrections landing/workspace
+
+- Restauration landing commerciale et animations/parallax.
+- Préparation photo initiale hero-dashboard.png avec fallback CSS.
+- Couleur neutre gris AutoCAD pour nouveaux éléments.
+- Grille infinie style AutoCAD.
+- Barre basse métrés/statut masquée.
+- Ajout shell Super Admin Console.
