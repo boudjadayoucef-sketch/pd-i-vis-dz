@@ -1,53 +1,84 @@
 import React, { useState } from "react";
+import pdiLogoHorizontalAsset from "../../assets/images/pdi_logo_horizontal_1786833058854.jpg";
+import pdiLogoSquareAsset from "../../assets/images/pdi_logo_square_1786833049529.jpg";
+import {
+  PDI_LOGO_HORIZONTAL_DATA_URL,
+  PDI_LOGO_SQUARE_DATA_URL,
+} from "../../assets/pdiLogos";
 
-// PD&I — Logo officiel servi depuis /public.
-const HORIZONTAL_LOGOS = [
-  '/pdi-logo-horizontal.png',
-  '/pdi-logo-horizontal.jpg',
-  '/pdi-logo-horizental.jpeg',
-  '/logo_pdi_horizontal.png',
-  '/pdi_horizontal.png'
+// PD&I — Logo officiel certifié ISO (Vite bundled + Data URL fallbacks)
+const HORIZONTAL_SOURCES = [
+  pdiLogoHorizontalAsset,
+  PDI_LOGO_HORIZONTAL_DATA_URL,
+  "/pdi-logo-horizontal.png",
+  "/pdi-logo-horizontal.jpg",
+  "/pdi-logo-horizental.jpeg",
 ];
-const SQUARE_LOGOS = [
-  '/pdi-logo-square.png',
-  '/pdi-logo-square.jpg',
-  '/pdo-logo-square.jpeg',
-  '/logo_pdi_square.png',
-  '/pdi_square.png'
+
+const SQUARE_SOURCES = [
+  pdiLogoSquareAsset,
+  PDI_LOGO_SQUARE_DATA_URL,
+  "/pdi-logo-square.png",
+  "/pdi-logo-square.jpg",
+  "/pdo-logo-square.jpeg",
 ];
 
 export type PdiBrandMarkProps = {
-  variant?: "horizontal" | "compact";
-  size?: "sm" | "md" | "lg";
+  variant?: "horizontal" | "compact" | "square";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
+  onClick?: () => void;
+  title?: string;
 };
 
 export default function PdiBrandMark({
   variant = "horizontal",
   size = "md",
   className = "",
+  onClick,
+  title = "PD&I — Piping Design & Isometrics",
 }: PdiBrandMarkProps) {
-  const compact = variant === "compact";
-  const logos = compact ? SQUARE_LOGOS : HORIZONTAL_LOGOS;
-  const [idx, setIdx] = useState(0);
-  const height = size === "sm" ? 38 : size === "lg" ? 70 : 52;
-  const src = logos[Math.min(idx, logos.length - 1)];
+  const compact = variant === "compact" || variant === "square";
+  const sources = compact ? SQUARE_SOURCES : HORIZONTAL_SOURCES;
+  const [srcIndex, setSrcIndex] = useState(0);
+
+  const height =
+    size === "xs"
+      ? 26
+      : size === "sm"
+      ? 36
+      : size === "md"
+      ? 48
+      : size === "lg"
+      ? 64
+      : 84;
+
+  const currentSrc = sources[Math.min(srcIndex, sources.length - 1)];
 
   return (
-    <div className={`pdi-brand-mark ${className}`} aria-label="PD&I — Piping Design & Isometrics">
+    <div
+      className={`pdi-brand-mark inline-flex items-center select-none ${className} ${onClick ? "cursor-pointer" : ""}`}
+      aria-label={title}
+      title={title}
+      onClick={onClick}
+    >
       <img
-        src={src}
-        alt="PD&I — Piping Design & Isometrics"
-        onError={() => setIdx((value) => Math.min(value + 1, logos.length - 1))}
+        src={currentSrc}
+        alt={title}
+        onError={() => setSrcIndex((idx) => Math.min(idx + 1, sources.length - 1))}
         style={{
           height,
           width: compact ? height : undefined,
-          maxWidth: compact ? height : "min(330px, 34vw)",
+          maxWidth: compact ? height : "min(320px, 40vw)",
           objectFit: "contain",
           display: "block",
+          borderRadius: compact ? "8px" : "6px",
         }}
+        loading="eager"
+        decoding="sync"
         draggable={false}
       />
     </div>
   );
 }
+

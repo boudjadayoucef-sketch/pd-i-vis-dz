@@ -1341,9 +1341,21 @@ function IsometrieModule() {
   const autosaveBaselineRef=useRef<string|null>(null);
   const [saveState,setSaveState]=useState<"idle"|"modified"|"autosaved"|"error">("idle");
   const [lastSavedAt,setLastSavedAt]=useState<string|null>(null);
+  const [topbarProfileOpen, setTopbarProfileOpen] = useState(false);
 
   const [viewport,setViewport]=useState({zoom:1,panX:0,panY:0});
   const drag=useRef<{x:number;y:number;px:number;py:number}|null>(null);
+  const activePointersRef = useRef<Map<number, { clientX: number; clientY: number }>>(new Map());
+  const touchPinchStateRef = useRef<{
+    initialDist: number;
+    initialZoom: number;
+    centerSx: number;
+    centerSy: number;
+    initialPanX: number;
+    initialPanY: number;
+    initialMidClientX: number;
+    initialMidClientY: number;
+  } | null>(null);
 
   const [nodeName,setNodeName]=useState("Nouveau point");
   const [nodeType,setNodeType]=useState<IsoNodeType>("normal");
@@ -1558,37 +1570,125 @@ function IsometrieModule() {
   const graphWarningCount=graphIssues.filter(i=>i.severity==="warning").length;
 
   const resetView=()=>{
-    if(!nodes.length){
-      setViewport({zoom:1,panX:0,panY:0});
-      setStatusMessage("Vue recentrée (défaut)");
+    // Collect all base world projection points from nodes, segments, cad2d, dimensions
+    const basePoints: Array<{ x: number; y: number }> = [];
+    const a = Math.PI / 6;
+    const cosA = Math.cos(a) * 28;
+    const sinA = Math.sin(a) * 28;
+
+    // 1) Graph Nodes
+    for (const n of nodes) {
+      const bx = (n.x - n.y) * cosA;
+      const by = (n.x + n.y) * sinA - (n.z || 0) * 28;
+      basePoints.push({ x: bx, y: by });
+    }
+
+    // 2) Segments endpoints
+    for (const s of segments) {
+      const ep = segmentEndpoints(s, nodes);
+      if (ep) {
+        basePoints.push({
+          x: (ep.from.x - ep.from.y) * cosA,
+          y: (ep.from.x + ep.from.y) * sinA - (ep.from.z || 0) * 28,
+        });
+        basePoints.push({
+          x: (ep.to.x - ep.to.y) * cosA,
+          y: (ep.to.x + ep.to.y) * sinA - (ep.to.z || 0) * 28,
+        });
+      }
+    }
+
+    // 3) CAD 2D Entities
+    for (const entity of cad2dEntities) {
+      if (entity.visible === false) continue;
+      const z = entity.metadata?.elevationZ || 0;
+      if (entity.points) {
+        for (const p of entity.points) {
+          basePoints.push({
+            x: (p.x - p.y) * cosA,
+            y: (p.x + p.y) * sinA - z * 28,
+          });
+        }
+      }
+      if (entity.center) {
+        const cx = (entity.center.x - entity.center.y) * cosA;
+        const cy = (entity.center.x + entity.center.y) * sinA - z * 28;
+        const r = (entity.radius || 1) * 18;
+        basePoints.push({ x: cx - r, y: cy - r });
+        basePoints.push({ x: cx + r, y: cy + r });
+      }
+    }
+
+    // 4) Dimensions
+    for (const d of dimensions) {
+      const aw = resolveDimensionAnchor(d.a);
+      const bw = resolveDimensionAnchor(d.b);
+      if (aw) {
+        basePoints.push({
+          x: (aw.x - aw.y) * cosA,
+          y: (aw.x + aw.y) * sinA - (aw.z || 0) * 28,
+        });
+      }
+      if (bw) {
+        basePoints.push({
+          x: (bw.x - bw.y) * cosA,
+          y: (bw.x + bw.y) * sinA - (bw.z || 0) * 28,
+        });
+      }
+    }
+
+    if (basePoints.length === 0) {
+      setViewport({ zoom: 1, panX: 0, panY: -10 });
+      setStatusMessage("Vue recentrée (origine 0,0,0)");
       return;
     }
-    const pts=nodes.map(n=>isoProjectV4(n.x,n.y,n.z||0,1,0,0));
-    const minX=Math.min(...pts.map(p=>p.x));
-    const maxX=Math.max(...pts.map(p=>p.x));
-    const minY=Math.min(...pts.map(p=>p.y));
-    const maxY=Math.max(...pts.map(p=>p.y));
-    const spanX=maxX-minX;
-    const spanY=maxY-minY;
-    if(spanX<10&&spanY<10){
-      const centerX=(minX+maxX)/2;
-      const centerY=(minY+maxY)/2;
-      setViewport({zoom:1,panX:Math.round(310-centerX),panY:Math.round(200-centerY)});
-      setStatusMessage("Vue centrée sur le modèle");
-      return;
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of basePoints) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
     }
-    const availW=620-100;
-    const availH=400-80;
-    const fitZoom=clamp(Math.min(availW/(spanX||1),availH/(spanY||1)),0.4,2.5);
-    const midX=(minX+maxX)/2;
-    const midY=(minY+maxY)/2;
-    const panX=-(midX-310)*fitZoom;
-    const panY=-(midY-200)*fitZoom;
-    setViewport({zoom:Number(fitZoom.toFixed(2)),panX:Math.round(panX),panY:Math.round(panY)});
-    setStatusMessage("Vue ajustée au modèle");
+
+    const spanX = Math.max(1, maxX - minX);
+    const spanY = Math.max(1, maxY - minY);
+    const midBaseX = (minX + maxX) / 2;
+    const midBaseY = (minY + maxY) / 2;
+
+    const availW = 620 - 90;
+    const availH = 400 - 70;
+
+    let fitZoom = 1;
+    if (spanX > 5 || spanY > 5) {
+      fitZoom = Math.min(availW / spanX, availH / spanY);
+      fitZoom = clamp(fitZoom, 0.05, 12);
+    }
+
+    const panX = Math.round(-midBaseX * fitZoom);
+    const panY = Math.round(-10 - midBaseY * fitZoom);
+
+    setViewport({
+      zoom: Number(fitZoom.toFixed(3)),
+      panX,
+      panY,
+    });
+    setStatusMessage(`Vue ajustée au modèle (${Math.round(fitZoom * 100)}%)`);
   };
-  const zoomIn=()=>setViewport(v=>({...v,zoom:clamp(v.zoom*1.2,.35,4)}));
-  const zoomOut=()=>setViewport(v=>({...v,zoom:clamp(v.zoom/1.2,.35,4)}));
+  const zoomIn=()=>setViewport(v=>{
+    const nextZoom = clamp(v.zoom * 1.25, 0.02, 100);
+    const factor = nextZoom / v.zoom;
+    const panX = (310 - 310) - (310 - 310 - v.panX) * factor;
+    const panY = (200 - 210) - (200 - 210 - v.panY) * factor;
+    return { zoom: Number(nextZoom.toFixed(3)), panX: Math.round(panX), panY: Math.round(panY) };
+  });
+  const zoomOut=()=>setViewport(v=>{
+    const nextZoom = clamp(v.zoom / 1.25, 0.02, 100);
+    const factor = nextZoom / v.zoom;
+    const panX = (310 - 310) - (310 - 310 - v.panX) * factor;
+    const panY = (200 - 210) - (200 - 210 - v.panY) * factor;
+    return { zoom: Number(nextZoom.toFixed(3)), panX: Math.round(panX), panY: Math.round(panY) };
+  });
 
   // PATCH 004 : application d'un instantane, partagee par undo et redo.
   const applyGraphSnapshot=(snap:{nodes:IsoNode[];segments:IsoSegment[];lines:PipingLine[];dimensions:IsoDimension[]})=>{
@@ -2107,10 +2207,11 @@ function IsometrieModule() {
     e.stopPropagation();
     const { sx, sy } = getSvgCoordinates(e.clientX, e.clientY, svgRef.current || (e.currentTarget as unknown as SVGSVGElement));
 
+    // 1) Trackpad Pinch-to-zoom (Browser sets ctrlKey or metaKey during pinch gestures)
     if (e.ctrlKey || e.metaKey) {
-      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+      const zoomFactor = Math.pow(1.008, -e.deltaY);
       setViewport((v) => {
-        const nextZoom = clamp(v.zoom * zoomFactor, 0.35, 4);
+        const nextZoom = clamp(v.zoom * zoomFactor, 0.02, 100);
         const factor = nextZoom / v.zoom;
         const panX = (sx - 310) - (sx - 310 - v.panX) * factor;
         const panY = (sy - 210) - (sy - 210 - v.panY) * factor;
@@ -2119,12 +2220,30 @@ function IsometrieModule() {
       return;
     }
 
+    // 2) Shift + Wheel = Horizontal pan
     if (e.shiftKey) {
       const delta = e.deltaY !== 0 ? e.deltaY : e.deltaX;
       setViewport((v) => ({ ...v, panX: Math.round(v.panX - delta) }));
       return;
     }
 
+    // 3) Physical Mouse Wheel Zoom:
+    // When rolling the physical mouse wheel, deltaMode is 1 (lines) or deltaY is discrete steps with negligible deltaX.
+    // In CAD standard UX (AutoCAD, Plant 3D), wheel scrolling zooms centered at cursor!
+    const isMouseWheel = e.deltaMode === 1 || (Math.abs(e.deltaY) >= 30 && Math.abs(e.deltaX) === 0);
+    if (isMouseWheel) {
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+      setViewport((v) => {
+        const nextZoom = clamp(v.zoom * zoomFactor, 0.02, 100);
+        const factor = nextZoom / v.zoom;
+        const panX = (sx - 310) - (sx - 310 - v.panX) * factor;
+        const panY = (sy - 210) - (sy - 210 - v.panY) * factor;
+        return { zoom: Number(nextZoom.toFixed(3)), panX: Math.round(panX), panY: Math.round(panY) };
+      });
+      return;
+    }
+
+    // 4) Trackpad Two-Finger Pan:
     if (Math.abs(e.deltaX) > 0 || Math.abs(e.deltaY) > 0) {
       setViewport((v) => ({
         ...v,
@@ -2134,6 +2253,42 @@ function IsometrieModule() {
     }
   };
   const pointerDown=(e:React.PointerEvent<SVGSVGElement>)=>{
+    activePointersRef.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+    // Multi-touch gestures (Pinch-to-zoom & two-finger pan on touchscreens / tablets / phones)
+    if (activePointersRef.current.size >= 2) {
+      const pts = Array.from(activePointersRef.current.values());
+      const p1 = pts[0];
+      const p2 = pts[1];
+      const dist = Math.max(1, Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY));
+      const midClientX = (p1.clientX + p2.clientX) / 2;
+      const midClientY = (p1.clientY + p2.clientY) / 2;
+      const { sx, sy } = getSvgCoordinates(midClientX, midClientY, svgRef.current || (e.currentTarget as unknown as SVGSVGElement));
+      touchPinchStateRef.current = {
+        initialDist: dist,
+        initialZoom: viewport.zoom,
+        centerSx: sx,
+        centerSy: sy,
+        initialPanX: viewport.panX,
+        initialPanY: viewport.panY,
+        initialMidClientX: midClientX,
+        initialMidClientY: midClientY,
+      };
+      drag.current = null;
+      marqueeRef.current = null;
+      setMarquee(null);
+      setDragNodeId(null);
+      return;
+    }
+
+    // Middle click (wheel button) = Universal CAD pan
+    if (e.button === 1) {
+      e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      drag.current = { x: e.clientX, y: e.clientY, px: viewport.panX, py: viewport.panY };
+      return;
+    }
+
     const target=e.target as Element;
     const additive=e.ctrlKey||e.metaKey||e.shiftKey;
     const { sx, sy } = getSvgCoordinates(e.clientX, e.clientY, svgRef.current || (e.currentTarget as unknown as SVGSVGElement));
@@ -2281,6 +2436,34 @@ function IsometrieModule() {
   };
 
   const pointerMove=(e:React.PointerEvent<SVGSVGElement>)=>{
+    if (activePointersRef.current.has(e.pointerId)) {
+      activePointersRef.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+    }
+
+    // 2-finger multi-touch gesture processing (pinch-to-zoom & two-finger pan)
+    if (activePointersRef.current.size >= 2 && touchPinchStateRef.current) {
+      const pts = Array.from(activePointersRef.current.values());
+      const p1 = pts[0];
+      const p2 = pts[1];
+      const dist = Math.max(1, Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY));
+      const midClientX = (p1.clientX + p2.clientX) / 2;
+      const midClientY = (p1.clientY + p2.clientY) / 2;
+      const st = touchPinchStateRef.current;
+      const scale = dist / (st.initialDist || 1);
+      const nextZoom = clamp(st.initialZoom * scale, 0.02, 100);
+      const factor = nextZoom / st.initialZoom;
+      const deltaPanX = midClientX - st.initialMidClientX;
+      const deltaPanY = midClientY - st.initialMidClientY;
+      const panX = (st.centerSx - 310) - (st.centerSx - 310 - st.initialPanX) * factor + deltaPanX;
+      const panY = (st.centerSy - 210) - (st.centerSy - 210 - st.initialPanY) * factor + deltaPanY;
+      setViewport({
+        zoom: Number(nextZoom.toFixed(3)),
+        panX: Math.round(panX),
+        panY: Math.round(panY),
+      });
+      return;
+    }
+
     if (updateCad2dPointer(e)) return;
     const { sx, sy } = getSvgCoordinates(e.clientX, e.clientY, svgRef.current || (e.currentTarget as unknown as SVGSVGElement));
 
@@ -2456,6 +2639,14 @@ function IsometrieModule() {
   };
 
   const pointerUp=(e?:React.PointerEvent<SVGSVGElement>)=>{
+    if (e) {
+      activePointersRef.current.delete(e.pointerId);
+    } else {
+      activePointersRef.current.clear();
+    }
+    if (activePointersRef.current.size < 2) {
+      touchPinchStateRef.current = null;
+    }
     endCad2dPointer();
     if(marqueeRef.current){
       const m = marqueeRef.current;
@@ -3428,13 +3619,15 @@ function IsometrieModule() {
     {
       title: "Fichier",
       items: [
+        { label: "✦ Nouveau projet", hint: "Choix", run: () => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "launcher" })) },
         { label: "⌂ Retour Accueil", hint: "Home", run: () => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "home" })) },
-        { label: "◈ Landing", hint: "Ouverture", run: () => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "landing" })) },
+        { label: "◈ Présentation Landing", hint: "Ouverture", run: () => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "landing" })) },
         { label: "Exemple poste", hint: "charger", run: loadPresetPoste },
         { label: "Exemple gare racleur", hint: "charger", run: loadPresetGare },
         { label: "📋 Tableau Propriétés & BOM", hint: "F2", run: () => { setPropertiesModalOpen(true); setPropertiesActiveTab("all"); } },
         { label: "Ouvrir JSON", hint: "import", run: () => importProjectRef.current?.click() },
         { label: "Sauver JSON", hint: "export", run: exportProjectJson },
+        { label: "⎋ Déconnexion", hint: "Logout", run: () => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "logout" })) },
       ],
     },
     {
@@ -3584,7 +3777,15 @@ function IsometrieModule() {
 
 
         [data-pdi-studio] ::-webkit-scrollbar{width:8px;height:8px}[data-pdi-studio] ::-webkit-scrollbar-track{background:#0B0F14}[data-pdi-studio] ::-webkit-scrollbar-thumb{background:#374151;border:2px solid #0B0F14;border-radius:8px}
-        @media(max-width:900px){[data-pdi-studio].pdi-studio-root{padding-left:8px!important;padding-top:92px!important}[data-pdi-studio] .pdi-studio-rail{display:none!important}[data-pdi-studio] .pdi-brand-subtitle{display:none}[data-pdi-studio] .pdi-cad-menubar{position:absolute;left:8px;right:8px;bottom:6px;overflow-x:auto;padding-bottom:1px}[data-pdi-studio] .pdi-cad-menu-trigger{font-size:10px;padding:0 8px}[data-pdi-studio] .pdi-svg-logo{min-width:170px!important;max-width:210px!important}}
+        @media(max-width:900px){
+          [data-pdi-studio].pdi-studio-root{padding-left:8px!important;padding-right:8px!important;padding-top:116px!important}
+          [data-pdi-studio] .pdi-studio-rail{display:none!important}
+          [data-pdi-studio] .pdi-brand-subtitle{display:none}
+          [data-pdi-studio] .pdi-cad-menubar{display:none!important}
+          [data-pdi-studio] .pdi-cad-ribbon{left:0!important}
+          [data-pdi-studio] .pdi-cad-menu-trigger{font-size:10px;padding:0 8px}
+          [data-pdi-studio] .pdi-brand-logo{height:28px!important;width:auto!important;max-width:150px!important}
+        }
         @media(max-width:1200px){[data-pdi-studio] .pdi-cad-menu-trigger{padding:0 7px;font-size:10px}}
 
         [data-pdi-studio] .pdi-compact-metrics, [data-pdi-studio] .pdi-metric-card{min-height:52px!important;padding:8px 10px!important;border-radius:14px!important}
@@ -3671,6 +3872,73 @@ function IsometrieModule() {
             </button>
             <div className="hidden xl:flex items-center gap-3 text-[10px] text-slate-400"><span>{nodes.length} nœuds</span><span>{segments.length} tronçons</span><span className={graphErrorCount?"text-red-400":"text-emerald-400"}>{graphErrorCount?`${graphErrorCount} erreur(s)`:"Graphe valide"}</span></div>
             <button onClick={()=>setCommandPaletteOpen(true)} className="h-8 px-2 rounded-md border border-slate-700 bg-slate-800 text-[10px] font-black" title="Palette commandes">⌘K</button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setTopbarProfileOpen(v => !v)}
+                className="h-8 px-2.5 rounded-md border border-cyan-500/40 bg-slate-900 hover:bg-cyan-950/50 text-cyan-200 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                title="Menu Profil & Session"
+              >
+                <span>Youcef</span>
+                <span className="text-[10px] opacity-70">▾</span>
+              </button>
+              {topbarProfileOpen && (
+                <div
+                  className="fixed right-3 top-[50px] z-[10010] w-56 rounded-xl border border-cyan-500/40 bg-[#0B111A]/95 backdrop-blur-md p-1.5 shadow-2xl text-xs flex flex-col gap-0.5"
+                  onClick={() => setTopbarProfileOpen(false)}
+                >
+                  <div className="px-3 py-2 border-b border-slate-700/50 mb-1">
+                    <p className="font-bold text-slate-200 truncate">Youcef</p>
+                    <p className="text-[10px] text-cyan-400 uppercase font-mono">Session active</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "launcher" }))}
+                    className="w-full text-left px-3 py-2 rounded-lg text-slate-200 hover:bg-cyan-950/60 hover:text-cyan-200 font-bold transition-all flex items-center justify-between"
+                  >
+                    <span>✦ Nouveau projet</span>
+                    <span className="text-[10px] text-slate-400">Choix</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "home" }))}
+                    className="w-full text-left px-3 py-2 rounded-lg text-slate-200 hover:bg-slate-800 font-bold transition-all"
+                  >
+                    ⌂ Accueil PD&I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "profile" }))}
+                    className="w-full text-left px-3 py-2 rounded-lg text-slate-200 hover:bg-slate-800 font-bold transition-all"
+                  >
+                    👤 Voir mon profil
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "projects" }))}
+                    className="w-full text-left px-3 py-2 rounded-lg text-slate-200 hover:bg-slate-800 font-bold transition-all"
+                  >
+                    📁 Mes projets
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "landing" }))}
+                    className="w-full text-left px-3 py-2 rounded-lg text-slate-200 hover:bg-slate-800 font-bold transition-all"
+                  >
+                    ◈ Présentation Landing
+                  </button>
+                  <div className="h-px bg-red-500/20 my-1" />
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("pdi:navigate", { detail: "logout" }))}
+                    className="w-full text-left px-3 py-2 rounded-lg text-red-400 hover:bg-red-950/40 hover:text-red-300 font-bold transition-all flex items-center justify-between"
+                  >
+                    <span>⎋ Déconnexion</span>
+                    <span className="text-[10px] text-red-400/70">Accueil</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <div className="pdi-cad-ribbon fixed left-[62px] right-0 top-[54px] z-[10004] h-[54px] px-3 flex items-center gap-2 overflow-x-auto">
@@ -4299,7 +4567,16 @@ setLastSavedAt(restoredTime);setSaveState("autosaved");setRecoveryCandidate(null
       <div className={`${leftPanelOpen && rightPanelOpen ? "lg:col-span-6" : leftPanelOpen || rightPanelOpen ? "lg:col-span-9" : "lg:col-span-12"} ${workspaceFullscreen ? "h-full min-h-0" : ""}`}>
         <div className={`${workspaceFullscreen ? "h-full min-h-0 flex flex-col overflow-hidden" : ""} bg-slate-900 rounded-3xl border-2 border-slate-800 p-3 shadow-2xl`}>
           <div className="flex flex-wrap justify-between gap-2 text-white border-b border-slate-800 pb-3 mb-2">
-            <div className="flex items-center gap-2"><span className="hidden">Vue isométrique 30°</span><span className="text-[10px] font-mono bg-slate-800 px-2 py-1 rounded">{Math.round(viewport.zoom*100)}%</span></div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setViewport(v => ({ ...v, zoom: 1 }))}
+                className="text-[10px] font-mono bg-slate-800 hover:bg-slate-700 active:bg-blue-600 px-2 py-1 rounded text-slate-200 hover:text-white transition-colors cursor-pointer border border-slate-700/60"
+                title="Cliquer pour réinitialiser le zoom à 100%"
+              >
+                {Math.round(viewport.zoom * 100)}%
+              </button>
+            </div>
             <div className="w-full xl:w-auto min-w-0 flex flex-wrap justify-start xl:justify-end items-center gap-1">
 
             <div className="flex shrink-0 gap-1"><button type="button" onClick={()=>setIsoMode("editor")} className={`px-2 py-1 rounded text-[9px] font-black ${isoMode==="editor"?"bg-blue-600":"bg-slate-700"}`}>ÉDITEUR</button><button type="button" onClick={()=>setIsoMode("planche")} className={`px-2 py-1 rounded text-[9px] font-black ${isoMode==="planche"?"bg-blue-600":"bg-slate-700"}`}>PLANCHE ISO</button></div>
@@ -4322,12 +4599,12 @@ setLastSavedAt(restoredTime);setSaveState("autosaved");setRecoveryCandidate(null
               <button type="button" onClick={()=>setShowPipeLabels(v=>!v)} className={`px-2 py-1 rounded text-[10px] font-bold ${showPipeLabels?"bg-cyan-600":"bg-slate-700"}`}>PL</button>
               <button type="button" onClick={()=>setShowWelds(v=>!v)} className={`px-2 py-1 rounded text-[10px] font-bold ${showWelds?"bg-amber-600":"bg-slate-700"}`}>W</button>
               <button type="button" onClick={()=>setShowLabels(v=>!v)} className="px-2 py-1 bg-slate-700 rounded text-[10px] font-bold">Aa</button>
-              <button type="button" onClick={zoomOut} className="px-2 py-1 bg-slate-700 rounded"><ZoomOut className="w-3.5 h-3.5"/></button>
-              <button type="button" onClick={zoomIn} className="px-2 py-1 bg-slate-700 rounded"><ZoomIn className="w-3.5 h-3.5"/></button>
+              <button type="button" onClick={zoomOut} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded" title="Zoom arrière (-)"><ZoomOut className="w-3.5 h-3.5"/></button>
+              <button type="button" onClick={zoomIn} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded" title="Zoom avant (+)"><ZoomIn className="w-3.5 h-3.5"/></button>
               <button type="button" onClick={undoGraph} className="px-2 py-1 bg-red-800/80 hover:bg-red-700 rounded text-[10px] font-black flex items-center gap-1" title="Annuler (Ctrl+Z)"><Undo2 className="w-3.5 h-3.5"/>↶</button>
               <button type="button" onClick={redoGraph} className="px-2 py-1 bg-blue-800/80 hover:bg-blue-700 rounded text-[10px] font-black flex items-center gap-1" title="Rétablir (Ctrl+Y / Ctrl+Shift+Z)"><Redo2 className="w-3.5 h-3.5"/>↷</button>
-              <button type="button" onClick={()=>{setSelectedNodeIds([]);setSelectedNodeId(null);setSelectedFitting(null);setSelectedSegmentIds([]);setSelectedSegmentId(null);}} className="px-2 py-1 bg-slate-700 rounded text-[10px] font-bold" title="Désélectionner tout">×</button>
-              <button type="button" onClick={resetView} className="px-2 py-1 bg-slate-700 rounded" title="Recentrer"><RefreshCw className="w-3.5 h-3.5"/></button>
+              <button type="button" onClick={()=>{setSelectedNodeIds([]);setSelectedNodeId(null);setSelectedFitting(null);setSelectedSegmentIds([]);setSelectedSegmentId(null);}} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[10px] font-bold" title="Désélectionner tout">×</button>
+              <button type="button" onClick={resetView} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-cyan-300 hover:text-white" title="Recentrer et ajuster la vue (Touche 0 / Fit)"><RefreshCw className="w-3.5 h-3.5"/></button>
             </div>
           </div>
 
