@@ -32,6 +32,7 @@ export * from "./types/componentResolutionTypes";
 export * from "./types/normativeSourceDocumentTypes";
 export * from "./types/b31_3DataTypes";
 export * from "./types/multiCodeResolverTypes";
+export * from "./types/b31_8ReadinessTypes";
 export * from "./data/b31_3/b31_3Types";
 export * from "./data/b31_3/b31_3VerifiedData";
 
@@ -100,6 +101,7 @@ export * from "./validators/multiCodeResolverValidator";
 
 export * from "./engine/designCodeEngine";
 export * from "./engine/multiCodeResolver";
+export * from "./engine/b31_8ReadinessEngine";
 export * from "./engine/normativeCompatibilityEngine";
 export * from "./engine/normativeCompatibilityMatrixEngine";
 export * from "./engine/normativeComponentCompatibilityEngine";
@@ -164,3 +166,4 @@ export * from "./tests/arch07IndustrialArchitectureTests";
 export * from "./tests/arch08MultiDomainArchitectureTests";
 export * from "./tests/arch09MultiCodeResolverTests";
 export * from "./tests/arch10PipelineEngineeringModelTests";
+export * from "./tests/arch11B31_8PipelineReadinessTests";
